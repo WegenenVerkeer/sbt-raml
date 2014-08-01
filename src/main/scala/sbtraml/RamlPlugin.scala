@@ -17,6 +17,10 @@ object RamlPlugin extends Plugin {
   val ramlUseJsr303Annotations = SettingKey[Boolean]("raml-use-jsr303-annotations", "Should JSR-303 annotations be used?")
   val ramlJsonMapper = SettingKey[String]("raml-json-mapper", "The JSON object mapper to generate annotations to: either \"jackson1\", \"jackson2\" or \"gson\" or \"none\".")
 
+  val ramlGenHtml = TaskKey[Unit]("raml-gen-html", "Outputs a single HTML page console based on a RAML definition using the raml2html documentation generator.")
+  val ramlHtmlFilename = SettingKey[String]("raml-html-filename", "The name of the generated HTML file.")
+  val ramlHtmlCmd = SettingKey[Seq[String]]("raml-html-cmd", "The raml2html command line utility.")
+
   def generateSources(outputDirectory: File, sourceDirectory: File, ramlFile: File, basePackageName: String, jaxrsVersion: JaxrsVersion, useJsr303Annotations: Boolean, jsonMapper: AnnotationStyle): Seq[File] = {
     outputDirectory.mkdirs()
     val configuration = new org.raml.jaxrs.codegen.core.Configuration()
@@ -33,12 +37,14 @@ object RamlPlugin extends Plugin {
     } toSeq
   }
 
-  val ramlSettings = Seq(
+  def generateHtml(cmd: Seq[String], in: File, out: File) = (cmd ++ Seq("-i", in.getAbsolutePath, "-o", out.getAbsolutePath)).!
+
+  val ramlBaseSettings = Seq(
     ramlFilename := "api.raml",
     ramlSourceDirectory := sourceDirectory.value / "main" / "raml"
   )
 
-  val ramlJaxrsSettings = ramlSettings ++ Seq(
+  val ramlJaxrsSettings = ramlBaseSettings ++ Seq(
     ramlJaxrsVersion := "2.0",
     ramlJsonMapper := "jackson2",
     ramlUseJsr303Annotations := false,
@@ -52,4 +58,14 @@ object RamlPlugin extends Plugin {
       jsonMapper = AnnotationStyle.valueOf(ramlJsonMapper.value.toUpperCase())
     )})
   )
+
+  val ramlGenHtmlSettings = ramlBaseSettings ++ Seq(
+    ramlHtmlCmd := Seq("raml2html"),
+    ramlHtmlFilename := "api.html",
+    ramlGenHtml := {
+      generateHtml(ramlHtmlCmd.value, ramlSourceDirectory.value / ramlFilename.value, target.value / ramlHtmlFilename.value)
+    }
+  )
+
+  val ramlSettings = ramlBaseSettings ++ ramlJaxrsSettings ++ ramlGenHtmlSettings
 }
