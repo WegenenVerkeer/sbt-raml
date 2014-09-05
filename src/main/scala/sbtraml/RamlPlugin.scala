@@ -37,11 +37,15 @@ object RamlPlugin extends Plugin {
     } toSeq
   }
 
-  def generateHtml(cmd: Seq[String], in: File, out: File) = (cmd ++ Seq("-i", in.getAbsolutePath, "-o", out.getAbsolutePath)).!
+  def generateHtml(cmd: Seq[String], in: File, out: File) = {
+    out.getParentFile.mkdirs()
+    (cmd ++ Seq("-i", in.getAbsolutePath, "-o", out.getAbsolutePath)).!
+  }
 
   val ramlBaseSettings = Seq(
     ramlFilename := "api.raml",
-    ramlSourceDirectory := sourceDirectory.value / "main" / "raml"
+    ramlSourceDirectory := sourceDirectory.value / "main" / "raml",
+    unmanagedResourceDirectories in Compile += ramlSourceDirectory.value
   )
 
   val ramlJaxrsSettings = ramlBaseSettings ++ Seq(
@@ -63,7 +67,7 @@ object RamlPlugin extends Plugin {
     ramlHtmlCmd := Seq("raml2html"),
     ramlHtmlFilename := "api.html",
     ramlGenHtml := {
-      generateHtml(ramlHtmlCmd.value, ramlSourceDirectory.value / ramlFilename.value, target.value / ramlHtmlFilename.value)
+      generateHtml(ramlHtmlCmd.value, ramlSourceDirectory.value / ramlFilename.value, target.value / "raml" / ramlHtmlFilename.value)
     }
   )
 
